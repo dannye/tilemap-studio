@@ -19,19 +19,18 @@ jobs:
       - name: Checkout FLTK
         uses: actions/checkout@master
         with:
-          path: fltk
+          path: lib/fltk
           repository: fltk/fltk
-          ref: release-1.3.7
+          ref: release-1.4.0rc1
           fetch-depth: 1
 
       - name: Install FLTK
-        working-directory: fltk
+        working-directory: lib/fltk
         run: |
-          ./autogen.sh --prefix="$PWD/.." --with-abiversion=10307
+          cmake -D CMAKE_INSTALL_PREFIX="$(realpath "$PWD/../..")" -D CMAKE_BUILD_TYPE=Release -D FLTK_GRAPHICS_CAIRO=1 -D FLTK_BACKEND_WAYLAND=0 -D FLTK_USE_SYSTEM_LIBPNG=0 -D FLTK_USE_SYSTEM_ZLIB=0
           make
           make install
 
       - name: Build
         run: |
-          export PATH="$PWD/bin:$PATH"
           make

@@ -14,6 +14,8 @@
 #include <unistd.h>
 #endif
 
+#include <cstring>
+
 Fl_Preferences *Preferences::_preferences = NULL;
 
 static void get_program_file_dir(char *path, size_t n, const char *argv0) {
@@ -53,7 +55,7 @@ void Preferences::initialize(const char *argv0) {
 	strcpy(prefs, dirname);
 	strcat(prefs, DIR_SEP PROGRAM_EXE_NAME PREFS_EXT);
 	if (file_exists(prefs)) {
-		_preferences = new Fl_Preferences(dirname, PROGRAM_AUTHOR, PROGRAM_EXE_NAME);
+		_preferences = new Fl_Preferences(dirname, PROGRAM_AUTHOR, PROGRAM_EXE_NAME, Fl_Preferences::C_LOCALE);
 		return;
 	}
 
@@ -61,12 +63,12 @@ void Preferences::initialize(const char *argv0) {
 	strcpy(prefs, dirname);
 	strcat(prefs, DIR_SEP PROGRAM_NAME PREFS_EXT);
 	if (file_exists(prefs)) {
-		_preferences = new Fl_Preferences(dirname, PROGRAM_AUTHOR, PROGRAM_NAME);
+		_preferences = new Fl_Preferences(dirname, PROGRAM_AUTHOR, PROGRAM_NAME, Fl_Preferences::C_LOCALE);
 		return;
 	}
 
 	// Use the user's FLTK preferences
-	_preferences = new Fl_Preferences(Fl_Preferences::USER, PROGRAM_AUTHOR, PROGRAM_NAME);
+	_preferences = new Fl_Preferences(Fl_Preferences::USER_L, PROGRAM_AUTHOR, PROGRAM_NAME);
 }
 
 void Preferences::close() {
