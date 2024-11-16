@@ -1612,6 +1612,7 @@ void Main_Window::copy_selection() const {
 	if (!_selection.selected_multiple() || _selection.from_tileset()) { return; }
 	size_t ow = _selection.width(), oh = _selection.height();
 	int z = Config::zoom();
+	float scale = fl_override_scale();
 	Fl_Copy_Surface *surface = new Fl_Copy_Surface(ow * TILE_SIZE * z, oh * TILE_SIZE * z);
 	surface->set_current();
 	size_t ox = _selection.left_col(), oy = _selection.top_row();
@@ -1624,6 +1625,7 @@ void Main_Window::copy_selection() const {
 	}
 	delete surface;
 	Fl_Display_Device::display_device()->set_current();
+	fl_restore_scale(scale);
 }
 
 void Main_Window::select_all() {
@@ -2308,11 +2310,13 @@ void Main_Window::print_cb(Fl_Widget *, Main_Window *mw) {
 
 	int w = (int)mw->_tilemap.width() * TILE_SIZE, h = (int)mw->_tilemap.height() * TILE_SIZE;
 	if (mw->_print_options_dialog->copied()) {
+		float scale = fl_override_scale();
 		Fl_Copy_Surface *surface = new Fl_Copy_Surface(w, h);
 		surface->set_current();
 		mw->_tilemap.print_tilemap();
 		delete surface;
 		Fl_Display_Device::display_device()->set_current();
+		fl_restore_scale(scale);
 
 		std::string msg = "Copied to clipboard!";
 		mw->_success_dialog->message(msg);
