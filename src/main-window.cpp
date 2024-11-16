@@ -37,11 +37,6 @@
 #include "app-icon.xpm"
 #endif
 
-// Avoid "warning C4458: declaration of 'i' hides class member"
-// due to Fl_Window's Fl_X *i
-#pragma warning(push)
-#pragma warning(disable : 4458)
-
 Main_Window::Main_Window(int x, int y, int w, int h, const char *) : Fl_Overlay_Window(x, y, w, h, PROGRAM_NAME),
 	_tile_buttons(), _tilemap_file(), _attrmap_file(), _tilemap_basename(), _tileset_files(), _recent_tilemaps(),
 	_recent_tilesets(), _tilemap(), _tilesets(), _wx(x), _wy(y), _ww(w), _wh(h) {
@@ -2955,5 +2950,3 @@ void Main_Window::change_tile_cb(Tile_Tessera *tt, Main_Window *mw) {
 		tt->redraw();
 	}
 }
-
-#pragma warning(pop)

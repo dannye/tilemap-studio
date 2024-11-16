@@ -20,11 +20,6 @@
 #include "tile.h"
 #include "main-window.h"
 
-// Avoid "warning C4458: declaration of 'i' hides class member"
-// due to Fl_Window's Fl_X *i
-#pragma warning(push)
-#pragma warning(disable : 4458)
-
 typedef std::set<Fl_Color> Color_Set;
 
 static bool build_tilemap(const Tile *tiles, size_t n, const std::vector<int> tile_palettes, Tilemap &tilemap, std::vector<size_t> &tileset,
@@ -454,5 +449,3 @@ Image_to_Tiles_Result Main_Window::image_to_tiles() {
 	output.success = true;
 	return output;
 }
-
-#pragma warning(pop)
