@@ -486,7 +486,7 @@ Main_Window::Main_Window(int x, int y, int w, int h, const char *) : Fl_Overlay_
 	_load_tb->callback((Fl_Callback *)load_tileset_cb, this);
 	_load_tb->image(LOAD_ICON);
 
-	_add_tb->tooltip("Add Tileset... (Ctrl+A)");
+	_add_tb->tooltip("Add Tileset... (Ctrl+Shift+T)");
 	_add_tb->callback((Fl_Callback *)add_tileset_cb, this);
 	_add_tb->image(ADD_ICON);
 
