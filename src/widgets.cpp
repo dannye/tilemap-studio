@@ -532,7 +532,7 @@ int Workpane::handle(int event) {
 Workspace::Workspace(int x, int y, int w, int h, const char *l) : OS_Scroll(x, y, w, h, l), Droppable(),
 	_content_w(0), _content_h(0), _ox(0), _oy(0), _cx(0), _cy(0) {
 	labeltype(FL_NO_LABEL);
-	box(OS_SPACER_THIN_DOWN_BOX);
+	box(OS_SPACER_THIN_DOWN_FRAME);
 	color(FL_INACTIVE_COLOR);
 }
 
