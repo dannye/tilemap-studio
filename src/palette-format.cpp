@@ -9,11 +9,6 @@
 #include "image.h"
 #include "option-dialogs.h"
 
-// Avoid "warning C4458: declaration of 'i' hides class member"
-// due to Fl_Window's Fl_X *i
-#pragma warning(push)
-#pragma warning(disable : 4458)
-
 static const char *palette_names[NUM_PALETTE_FORMATS] = {
 	"Indexed in tileset image",
 	"Pixel image (PNG)",
@@ -389,5 +384,3 @@ bool write_tilepal(const char *f, const std::vector<size_t> &tileset, const std:
 	fclose(file);
 	return true;
 }
-
-#pragma warning(pop)

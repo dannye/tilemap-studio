@@ -8,6 +8,7 @@
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Native_File_Chooser.H>
+#include <FL/platform.H>
 #pragma warning(pop)
 
 #include "utils.h"
@@ -118,8 +119,6 @@ public:
 	Main_Window(int x, int y, int w, int h, const char *l = NULL);
 	~Main_Window();
 	void show(void);
-	bool maximized(void) const;
-	void maximize(void);
 	void apply_transparency(void);
 	inline bool transparent(void) const { return _transparent_mi && !!_transparent_mi->value(); }
 	inline bool full_screen(void) const { return _full_screen_mi && !!_full_screen_mi->value(); }

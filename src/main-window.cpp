@@ -37,11 +37,6 @@
 #include "app-icon.xpm"
 #endif
 
-// Avoid "warning C4458: declaration of 'i' hides class member"
-// due to Fl_Window's Fl_X *i
-#pragma warning(push)
-#pragma warning(disable : 4458)
-
 Main_Window::Main_Window(int x, int y, int w, int h, const char *) : Fl_Overlay_Window(x, y, w, h, PROGRAM_NAME),
 	_tile_buttons(), _tilemap_file(), _attrmap_file(), _tilemap_basename(), _tileset_files(), _recent_tilemaps(),
 	_recent_tilesets(), _tilemap(), _tilesets(), _wx(x), _wy(y), _ww(w), _wh(h) {
@@ -491,7 +486,7 @@ Main_Window::Main_Window(int x, int y, int w, int h, const char *) : Fl_Overlay_
 	_load_tb->callback((Fl_Callback *)load_tileset_cb, this);
 	_load_tb->image(LOAD_ICON);
 
-	_add_tb->tooltip("Add Tileset... (Ctrl+A)");
+	_add_tb->tooltip("Add Tileset... (Ctrl+Shift+T)");
 	_add_tb->callback((Fl_Callback *)add_tileset_cb, this);
 	_add_tb->image(ADD_ICON);
 
@@ -708,54 +703,6 @@ void Main_Window::show() {
 	hints->icon_mask = _icon_mask;
 	XSetWMHints(fl_display, fl_xid(this), hints);
 	XFree(hints);
-#endif
-}
-
-bool Main_Window::maximized() const {
-#ifdef _WIN32
-	WINDOWPLACEMENT wp;
-	wp.length = sizeof(wp);
-	if (!GetWindowPlacement(fl_xid(this), &wp)) { return false; }
-	return wp.showCmd == SW_MAXIMIZE;
-#else
-	Atom wmState = XInternAtom(fl_display, "_NET_WM_STATE", True);
-	Atom actual;
-	int format;
-	unsigned long numItems, bytesAfter;
-	unsigned char *properties = NULL;
-	int result = XGetWindowProperty(fl_display, fl_xid(this), wmState, 0, 1024, False, AnyPropertyType, &actual, &format,
-		&numItems, &bytesAfter, &properties);
-	int numMax = 0;
-	if (result == Success && format == 32 && properties) {
-		Atom maxVert = XInternAtom(fl_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-		Atom maxHorz = XInternAtom(fl_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-		for (unsigned long i = 0; i < numItems; i++) {
-			Atom property = ((Atom *)properties)[i];
-			if (property == maxVert || property == maxHorz) {
-				numMax++;
-			}
-		}
-		XFree(properties);
-	}
-	return numMax == 2;
-#endif
-}
-
-void Main_Window::maximize() {
-#ifdef _WIN32
-	ShowWindow(fl_xid(this), SW_MAXIMIZE);
-#else
-	XEvent event;
-	memset(&event, 0, sizeof(event));
-	event.xclient.type = ClientMessage;
-	event.xclient.window = fl_xid(this);
-	event.xclient.message_type = XInternAtom(fl_display, "_NET_WM_STATE", False);
-	event.xclient.format = 32;
-	event.xclient.data.l[0] = 1;
-	event.xclient.data.l[1] = XInternAtom(fl_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-	event.xclient.data.l[2] = XInternAtom(fl_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-	event.xclient.data.l[3] = 1;
-	XSendEvent(fl_display, DefaultRootWindow(fl_display), False, SubstructureNotifyMask | SubstructureNotifyMask, &event);
 #endif
 }
 
@@ -1660,6 +1607,7 @@ void Main_Window::copy_selection() const {
 	if (!_selection.selected_multiple() || _selection.from_tileset()) { return; }
 	size_t ow = _selection.width(), oh = _selection.height();
 	int z = Config::zoom();
+	float scale = fl_override_scale();
 	Fl_Copy_Surface *surface = new Fl_Copy_Surface(ow * TILE_SIZE * z, oh * TILE_SIZE * z);
 	surface->set_current();
 	size_t ox = _selection.left_col(), oy = _selection.top_row();
@@ -1672,6 +1620,7 @@ void Main_Window::copy_selection() const {
 	}
 	delete surface;
 	Fl_Display_Device::display_device()->set_current();
+	fl_restore_scale(scale);
 }
 
 void Main_Window::select_all() {
@@ -2356,11 +2305,13 @@ void Main_Window::print_cb(Fl_Widget *, Main_Window *mw) {
 
 	int w = (int)mw->_tilemap.width() * TILE_SIZE, h = (int)mw->_tilemap.height() * TILE_SIZE;
 	if (mw->_print_options_dialog->copied()) {
+		float scale = fl_override_scale();
 		Fl_Copy_Surface *surface = new Fl_Copy_Surface(w, h);
 		surface->set_current();
 		mw->_tilemap.print_tilemap();
 		delete surface;
 		Fl_Display_Device::display_device()->set_current();
+		fl_restore_scale(scale);
 
 		std::string msg = "Copied to clipboard!";
 		mw->_success_dialog->message(msg);
@@ -2429,7 +2380,7 @@ void Main_Window::exit_cb(Fl_Widget *, Main_Window *mw) {
 		Preferences::set("h", mw->_wh);
 		Preferences::set("fullscreen", 1);
 	}
-	else if (mw->maximized()) {
+	else if (mw->maximize_active()) {
 #ifdef _WIN32
 		HWND hwnd = fl_xid(mw);
 		WINDOWPLACEMENT wp;
@@ -2472,7 +2423,7 @@ void Main_Window::exit_cb(Fl_Widget *, Main_Window *mw) {
 		Preferences::set("h", mw->h());
 		Preferences::set("fullscreen", 0);
 	}
-	Preferences::set("maximized", mw->maximized());
+	Preferences::set("maximized", mw->maximize_active());
 	Preferences::set("format", (int)Config::format());
 	Preferences::set("zoom", Config::zoom());
 	Preferences::set("grid", Config::grid());
@@ -2548,6 +2499,7 @@ void Main_Window::classic_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_classic_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::aero_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2555,6 +2507,7 @@ void Main_Window::aero_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_aero_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::metro_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2562,6 +2515,7 @@ void Main_Window::metro_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_metro_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::aqua_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2569,6 +2523,7 @@ void Main_Window::aqua_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_aqua_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::greybird_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2576,6 +2531,7 @@ void Main_Window::greybird_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_greybird_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::ocean_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2583,6 +2539,7 @@ void Main_Window::ocean_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_ocean_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::blue_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2590,6 +2547,7 @@ void Main_Window::blue_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_blue_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::olive_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2597,6 +2555,7 @@ void Main_Window::olive_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_olive_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::rose_gold_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2604,6 +2563,7 @@ void Main_Window::rose_gold_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_rose_gold_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::dark_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2611,6 +2571,7 @@ void Main_Window::dark_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_dark_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::brushed_metal_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2618,6 +2579,7 @@ void Main_Window::brushed_metal_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_brushed_metal_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::high_contrast_theme_cb(Fl_Menu_ *, Main_Window *mw) {
@@ -2625,6 +2587,7 @@ void Main_Window::high_contrast_theme_cb(Fl_Menu_ *, Main_Window *mw) {
 	mw->_high_contrast_theme_mi->setonly();
 	mw->update_icons();
 	mw->redraw();
+	mw->_help_window->redraw();
 }
 
 void Main_Window::zoom_in_cb(Fl_Widget *, Main_Window *mw) {
@@ -2697,12 +2660,14 @@ void Main_Window::transparent_cb(Fl_Menu_ *, Main_Window *mw) {
 
 void Main_Window::full_screen_cb(Fl_Menu_ *m, Main_Window *mw) {
 	if (m->mvalue()->value()) {
-		mw->_wx = mw->x(); mw->_wy = mw->y();
-		mw->_ww = mw->w(); mw->_wh = mw->h();
+		if (!mw->maximize_active()) {
+			mw->_wx = mw->x(); mw->_wy = mw->y();
+			mw->_ww = mw->w(); mw->_wh = mw->h();
+		}
 		mw->fullscreen();
 	}
 	else {
-		mw->fullscreen_off(mw->_wx, mw->_wy, mw->_ww, mw->_wh);
+		mw->fullscreen_off();
 	}
 }
 
@@ -2985,5 +2950,3 @@ void Main_Window::change_tile_cb(Tile_Tessera *tt, Main_Window *mw) {
 		tt->redraw();
 	}
 }
-
-#pragma warning(pop)
